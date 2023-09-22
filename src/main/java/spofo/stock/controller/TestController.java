@@ -22,7 +22,7 @@ public class TestController {
         RestClient restClient = RestClient.create();
 
         String resultByPortfolio = restClient.get()
-                .uri("http://portfolio.spofo.net/test")
+                .uri("http://portfolio.spofo.net:8080/test")
                 .retrieve()
                 .body(String.class);
 
@@ -34,7 +34,7 @@ public class TestController {
         RestClient restClient = RestClient.create();
 
         String resultByAuth = restClient.get()
-                .uri("http://auth.spofo.net/test")
+                .uri("http://auth.spofo.net:8080/test")
                 .retrieve()
                 .body(String.class);
 
