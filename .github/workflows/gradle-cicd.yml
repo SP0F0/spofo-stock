@@ -144,7 +144,7 @@ jobs:
           script: |
             sudo docker pull parkseunggyu/spofo-stock:latest
             sudo docker rm -f spofo-stock-app
-            sudo docker run -p 8080:8080 -itd --name spofo-app parkseunggyu/spofo-stock:latest
+            sudo docker run -p 8080:8080 -itd --name spofo-stock-app parkseunggyu/spofo-stock:latest
 
       # 등록했던 인바운드 규칙을 삭제하기
       - name: Remove Github Actions IP From Security Group
