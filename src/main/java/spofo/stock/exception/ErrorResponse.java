@@ -1,4 +1,4 @@
-package spofo.stock.exception.exception;
+package spofo.stock.exception;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
