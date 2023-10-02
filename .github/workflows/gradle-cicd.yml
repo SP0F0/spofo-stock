@@ -23,19 +23,38 @@
 # DOCKERHUB_USERNAME -> 도커 허브에 접속하기 위한 id 값
 #	 ex. 도커 허브에 로그인할 때의 계정을 입력
 
+# GIT_PAT -> 깃허브 private repo를 clone 받기 위한 private access token
+#	 ex. 깃허브의 access token 값 입력 (ghp_XXX...XXX 의 형식)
+
 name: spofo-stock CI / CD with Gradle
 
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+
 permissions:
   contents: read
 
 jobs:
+  setting_for_build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out env files
+        uses: actions/checkout@v3
+        with:
+          repository: SP0F0/spofo-env
+          token: ${{ secrets.GIT_PAT }}
+
+      - name: Upload env files
+        uses: actions/upload-artifact@master
+        with:
+          name: env-files
+          # 프로젝트의 설정 파일을 가져올 상위 폴더 지정
+          path: ./stock
+          
   build:
     runs-on: ubuntu-latest
+    needs: setting_for_build
     steps:
       # github action의 가상환경에 내 프로젝트를 체크아웃하기
       - name: Checkout
