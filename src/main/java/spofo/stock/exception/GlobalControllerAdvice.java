@@ -19,7 +19,7 @@ public class GlobalControllerAdvice {
     }
 
     @ExceptionHandler(StockException.class)
-    public ResponseEntity<?> applicationExceptionHandler(StockException e) {
+    public ResponseEntity<?> stockExceptionHandler(StockException e) {
         ErrorResponse exceptionResponse = new ErrorResponse(
                 e.getHttpStatus(),
                 e.getMessage());
