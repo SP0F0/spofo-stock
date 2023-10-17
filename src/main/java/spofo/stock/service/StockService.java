@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import spofo.stock.config.KisAccessTokenDto;
@@ -128,16 +129,20 @@ public class StockService {
                 .encode()
                 .buildAndExpand()
                 .toUri();
-
-        KisAccessTokenResponseDto responseBody = restClient.post()
-                .uri(uri)
-                .contentType(APPLICATION_JSON)
-                .body(kisAccessTokenDto)
-                .retrieve()
-                .toEntity(KisAccessTokenResponseDto.class)
-                .getBody();
-        return setValueToRedis(ACCESS_TOKEN_KEY,
-                responseBody.getAccess_token(), TOKEN_TTL);
+        try {
+            KisAccessTokenResponseDto responseBody = restClient.post()
+                    .uri(uri)
+                    .contentType(APPLICATION_JSON)
+                    .body(kisAccessTokenDto)
+                    .retrieve()
+                    .toEntity(KisAccessTokenResponseDto.class)
+                    .getBody();
+            return setValueToRedis(ACCESS_TOKEN_KEY,
+                    responseBody.getAccess_token(), TOKEN_TTL);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            throw new StockException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
     }
 
     private String getValueFromRedis(String key) {
