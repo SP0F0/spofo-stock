@@ -26,7 +26,7 @@ public class StockController {
     @GetMapping("/{stockCode}")
     public ResponseEntity<StockCurrentPriceResponseDto> getStockCurrentPrice(
             @PathVariable("stockCode") String stockCode) {
-        log.info("stockCode : {}", stockCode);
+
         StockCurrentPriceResponseDto stockCurrentPriceResponseDto = stockService.findCurrentPriceByStockCode(
                 stockCode);
         return ResponseEntity.ok(stockCurrentPriceResponseDto);
@@ -36,9 +36,7 @@ public class StockController {
     public ResponseEntity<List<StockCurrentPriceResponseDto>> getStocksCurrentPrice(
             @RequestBody Map<String, List<String>> stockCodeList
     ) {
-        for (String stockCode : stockCodeList.get("stockCodeList")) {
-            log.info("stockCode : {}", stockCode);
-        }
+
         List<StockCurrentPriceResponseDto> currentPriceByStockList = stockService.findCurrentPriceByStockList(
                 stockCodeList.get("stockCodeList"));
         return ResponseEntity.ok(currentPriceByStockList);
@@ -48,6 +46,7 @@ public class StockController {
     public ResponseEntity<List<StockSearchResponseDto>> getStocksByKeyword(
             @RequestParam("keyword") String keyword
     ) {
+
         List<StockSearchResponseDto> stockList = stockService.findStockByKeyword(
                 keyword);
         return ResponseEntity.ok(stockList);

@@ -9,10 +9,10 @@ public class KisAccessTokenDto {
 
     private final String grant_type = "client_credentials";
     private String appkey;
-    private String appsecret;
+    private String appSecret;
 
-    public KisAccessTokenDto(String appkey, String appsecret) {
+    public KisAccessTokenDto(String appkey, String appSecret) {
         this.appkey = appkey;
-        this.appsecret = appsecret;
+        this.appSecret = appSecret;
     }
 }

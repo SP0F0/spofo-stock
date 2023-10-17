@@ -22,7 +22,7 @@ import spofo.stock.data.StockSearchResponseDto;
 import spofo.stock.data.request.kis.KisAccessTokenResponseDto;
 import spofo.stock.data.request.kis.KisRequestDto;
 import spofo.stock.data.request.kis.Output;
-import spofo.stock.exception.ApplicationException;
+import spofo.stock.exception.StockException;
 import spofo.stock.exception.ErrorCode;
 import spofo.stock.repository.StockRedisRepository;
 import spofo.stock.repository.StockSearchRepository;
@@ -52,14 +52,12 @@ public class StockService {
     private final StockSearchRepository stockSearchRepository;
 
     public StockCurrentPriceResponseDto findCurrentPriceByStockCode(String stockCode) {
-        log.info("StockCurrentPriceResponseDto - stockCode : {}", stockCode);
         return stockRedisRepository.findById(stockCode)
                 .orElseGet(() -> getCurrentPriceByKis(stockCode));
     }
 
     @Transactional(readOnly = true)
     public List<StockSearchResponseDto> findStockByKeyword(String keyword) {
-        log.info("findStockByKeyword - keyword : {}", keyword);
         return stockSearchRepository.findStocksByKeyword(keyword);
     }
 
@@ -73,18 +71,13 @@ public class StockService {
 
     private StockCurrentPriceResponseDto getCurrentPriceByKis(String stockCode) {
 
-        log.info("getCurrentPriceByKis - stockCode : {}", stockCode);
-
         URI uri = generateCurrentPriceApiUri(stockCode);
         String accessToken = getAccessToken();
-        log.info("한투 요청 - accessToken : {}", accessToken);
         Output output = getCurrentPriceOutput(uri, accessToken);
-        log.info("한투 요청 끝 - output : {}", output.getRprs_mrkt_kor_name());
 
-        log.info("Redis 요청");
         String stockName = Optional.ofNullable(getValueFromRedis(stockCode)).orElseGet(
                 () -> getStockFromRedis(stockCode));
-        log.info("Redis 요청 완료");
+
         StockCurrentPriceResponseDto stockCurrentPriceResponseDto = StockCurrentPriceResponseDto.of(
                 output, stockName);
 
@@ -93,7 +86,7 @@ public class StockService {
 
     private String getStockFromRedis(String stockCode) {
         String stockName = stockSearchRepository.findStockNameByStockCode(stockCode)
-                .orElseThrow(() -> new ApplicationException(ErrorCode.INTERNAL_SERVER_ERROR));
+                .orElseThrow(() -> new StockException(ErrorCode.INTERNAL_SERVER_ERROR));
         setValueToRedis(stockCode, stockName, Duration.ofDays(30));
         return stockName;
     }
@@ -135,7 +128,7 @@ public class StockService {
                 .encode()
                 .buildAndExpand()
                 .toUri();
-        log.info("getAccessTokenFromKis : {}", uri.toString());
+
         KisAccessTokenResponseDto responseBody = restClient.post()
                 .uri(uri)
                 .contentType(APPLICATION_JSON)
@@ -155,6 +148,4 @@ public class StockService {
         redisTemplate.opsForValue().set(key, value, duration);
         return value;
     }
-
-
 }
