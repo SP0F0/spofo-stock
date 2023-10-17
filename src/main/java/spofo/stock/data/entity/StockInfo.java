@@ -9,7 +9,7 @@ public class StockInfo {
 
     private String name;
     private String stockCode;
-    private String imageUrl; // https://images.therich.io/images/logo/kr/086520.png
+    private String imageUrl;
     private String market;
     private String createdAt;
 }
