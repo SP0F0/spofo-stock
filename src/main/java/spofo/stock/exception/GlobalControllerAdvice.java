@@ -1,6 +1,5 @@
 package spofo.stock.exception;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -9,7 +8,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalControllerAdvice {
 
-    @ExceptionHandler(RuntimeException.class)
+    @ExceptionHandler
     public ResponseEntity<?> runtimeExceptionHandler(RuntimeException e) {
 
         return ResponseEntity
@@ -17,14 +16,14 @@ public class GlobalControllerAdvice {
                 .body(e.getMessage());
     }
 
-    @ExceptionHandler(StockException.class)
+    @ExceptionHandler
     public ResponseEntity<?> stockExceptionHandler(StockException e) {
-        ErrorResponse exceptionResponse = new ErrorResponse(
-                e.getHttpStatus(),
-                e.getMessage());
+
+        ErrorResponse errorResponse = new ErrorResponse(e.getStatus(),
+                e.getStatus().value(), e.getMessage());
 
         return ResponseEntity
-                .status(exceptionResponse.getHttpStatus())
-                .body(exceptionResponse);
+                .status(e.getStatus())
+                .body(errorResponse);
     }
 }
