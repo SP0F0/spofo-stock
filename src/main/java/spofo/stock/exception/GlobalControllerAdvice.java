@@ -18,8 +18,8 @@ public class GlobalControllerAdvice {
                 .body(e.getMessage());
     }
 
-    @ExceptionHandler(ApplicationException.class)
-    public ResponseEntity<?> applicationExceptionHandler(ApplicationException e) {
+    @ExceptionHandler(StockException.class)
+    public ResponseEntity<?> applicationExceptionHandler(StockException e) {
         ErrorResponse exceptionResponse = new ErrorResponse(
                 e.getHttpStatus(),
                 e.getMessage());
