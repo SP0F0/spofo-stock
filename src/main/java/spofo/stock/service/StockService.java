@@ -76,13 +76,18 @@ public class StockService {
         String accessToken = getAccessToken();
         Output output = getCurrentPriceOutput(uri, accessToken);
 
-        String stockName = Optional.ofNullable(getValueFromRedis(stockCode)).orElseGet(
-                () -> getStockFromRedis(stockCode));
+        try {
+            String stockName = Optional.ofNullable(getValueFromRedis(stockCode)).orElseGet(
+                    () -> getStockFromRedis(stockCode));
 
-        StockCurrentPriceResponseDto stockCurrentPriceResponseDto = StockCurrentPriceResponseDto.of(
-                output, stockName);
+            StockCurrentPriceResponseDto stockCurrentPriceResponseDto = StockCurrentPriceResponseDto.of(
+                    output, stockName);
 
-        return stockRedisRepository.save(stockCurrentPriceResponseDto);
+            return stockRedisRepository.save(stockCurrentPriceResponseDto);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            throw new StockException(ErrorCode.INVALID_STOCK_CODE);
+        }
     }
 
     private String getStockFromRedis(String stockCode) {
@@ -110,7 +115,7 @@ public class StockService {
     }
 
     private Output getCurrentPriceOutput(URI uri, String accessToken) {
-        return restClient.get()
+        KisRequestDto kisRequestDto = restClient.get()
                 .uri(uri)
                 .header("authorization", "Bearer " + accessToken)
                 .header("appkey", appKey)
@@ -118,8 +123,9 @@ public class StockService {
                 .header("tr_id", TRADE_ID)
                 .accept(APPLICATION_JSON)
                 .retrieve()
-                .body(KisRequestDto.class)
-                .getOutput();
+                .body(KisRequestDto.class);
+
+        return kisRequestDto.getOutput();
     }
 
     private String getAccessTokenFromKis() {
@@ -129,6 +135,7 @@ public class StockService {
                 .encode()
                 .buildAndExpand()
                 .toUri();
+
         try {
             KisAccessTokenResponseDto responseBody = restClient.post()
                     .uri(uri)
@@ -137,6 +144,7 @@ public class StockService {
                     .retrieve()
                     .toEntity(KisAccessTokenResponseDto.class)
                     .getBody();
+
             return setValueToRedis(ACCESS_TOKEN_KEY,
                     responseBody.getAccess_token(), TOKEN_TTL);
         } catch (Exception e) {
