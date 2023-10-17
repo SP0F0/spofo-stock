@@ -19,7 +19,6 @@ public class RestTemplateConfig {
 
     @Bean
     public RestTemplate restTemplate(RestTemplateBuilder builder) {
-        // 여기에 RestTemplate 설정 추가
         return builder
                 .setConnectTimeout(Duration.ofSeconds(30))
                 .setReadTimeout(Duration.ofSeconds(30))
@@ -30,16 +29,9 @@ public class RestTemplateConfig {
     public ClientHttpRequestInterceptor clientHttpRequestInterceptor() {
         return (request, body, execution) -> {
             HttpHeaders headers = request.getHeaders();
-
             headers.setContentType(APPLICATION_JSON);
 
             return execution.execute(request, body);
         };
-    }
-
-    private List<HttpMessageConverter<?>> getJsonMessageConverters() {
-        List<HttpMessageConverter<?>> converters = new ArrayList<>();
-        converters.add(new MappingJackson2HttpMessageConverter());
-        return converters;
     }
 }
