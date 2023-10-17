@@ -92,7 +92,7 @@ public class StockService {
 
     private String getStockFromRedis(String stockCode) {
         String stockName = stockSearchRepository.findStockNameByStockCode(stockCode)
-                .orElseThrow(() -> new StockException(ErrorCode.INTERNAL_SERVER_ERROR));
+                .orElseThrow(() -> new StockException(ErrorCode.INVALID_STOCK_CODE));
         setValueToRedis(stockCode, stockName, Duration.ofDays(30));
         return stockName;
     }
