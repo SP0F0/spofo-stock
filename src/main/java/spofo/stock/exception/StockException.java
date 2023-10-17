@@ -6,13 +6,13 @@ import org.springframework.http.HttpStatus;
 
 @Getter
 @AllArgsConstructor
-public class ApplicationException extends RuntimeException {
+public class StockException extends RuntimeException {
 
     private ErrorCode errorCode;
     private HttpStatus httpStatus;
     private String message;
 
-    public ApplicationException(ErrorCode errorCode) {
+    public StockException(ErrorCode errorCode) {
         this.errorCode = errorCode;
         this.httpStatus = errorCode.getHttpStatus();
         this.message = null;
