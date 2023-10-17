@@ -1,13 +1,15 @@
 package spofo.stock.exception;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
-@AllArgsConstructor
 @Getter
+@AllArgsConstructor
 public class ErrorResponse {
 
-    private HttpStatus httpStatus;
+    private HttpStatus status;
+    private int code;
     private String message;
 }

@@ -9,12 +9,12 @@ import org.springframework.http.HttpStatus;
 public class StockException extends RuntimeException {
 
     private ErrorCode errorCode;
-    private HttpStatus httpStatus;
+    private HttpStatus status;
     private String message;
 
     public StockException(ErrorCode errorCode) {
         this.errorCode = errorCode;
-        this.httpStatus = errorCode.getHttpStatus();
+        this.status = errorCode.getHttpStatus();
         this.message = null;
     }
 

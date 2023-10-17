@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import spofo.stock.config.KisAccessTokenDto;
@@ -75,18 +76,23 @@ public class StockService {
         String accessToken = getAccessToken();
         Output output = getCurrentPriceOutput(uri, accessToken);
 
-        String stockName = Optional.ofNullable(getValueFromRedis(stockCode)).orElseGet(
-                () -> getStockFromRedis(stockCode));
+        try {
+            String stockName = Optional.ofNullable(getValueFromRedis(stockCode)).orElseGet(
+                    () -> getStockFromRedis(stockCode));
 
-        StockCurrentPriceResponseDto stockCurrentPriceResponseDto = StockCurrentPriceResponseDto.of(
-                output, stockName);
+            StockCurrentPriceResponseDto stockCurrentPriceResponseDto = StockCurrentPriceResponseDto.of(
+                    output, stockName);
 
-        return stockRedisRepository.save(stockCurrentPriceResponseDto);
+            return stockRedisRepository.save(stockCurrentPriceResponseDto);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            throw new StockException(ErrorCode.INVALID_STOCK_CODE);
+        }
     }
 
     private String getStockFromRedis(String stockCode) {
         String stockName = stockSearchRepository.findStockNameByStockCode(stockCode)
-                .orElseThrow(() -> new StockException(ErrorCode.INTERNAL_SERVER_ERROR));
+                .orElseThrow(() -> new StockException(ErrorCode.INVALID_STOCK_CODE));
         setValueToRedis(stockCode, stockName, Duration.ofDays(30));
         return stockName;
     }
@@ -109,7 +115,7 @@ public class StockService {
     }
 
     private Output getCurrentPriceOutput(URI uri, String accessToken) {
-        return restClient.get()
+        KisRequestDto kisRequestDto = restClient.get()
                 .uri(uri)
                 .header("authorization", "Bearer " + accessToken)
                 .header("appkey", appKey)
@@ -117,8 +123,9 @@ public class StockService {
                 .header("tr_id", TRADE_ID)
                 .accept(APPLICATION_JSON)
                 .retrieve()
-                .body(KisRequestDto.class)
-                .getOutput();
+                .body(KisRequestDto.class);
+
+        return kisRequestDto.getOutput();
     }
 
     private String getAccessTokenFromKis() {
@@ -129,15 +136,21 @@ public class StockService {
                 .buildAndExpand()
                 .toUri();
 
-        KisAccessTokenResponseDto responseBody = restClient.post()
-                .uri(uri)
-                .contentType(APPLICATION_JSON)
-                .body(kisAccessTokenDto)
-                .retrieve()
-                .toEntity(KisAccessTokenResponseDto.class)
-                .getBody();
-        return setValueToRedis(ACCESS_TOKEN_KEY,
-                responseBody.getAccess_token(), TOKEN_TTL);
+        try {
+            KisAccessTokenResponseDto responseBody = restClient.post()
+                    .uri(uri)
+                    .contentType(APPLICATION_JSON)
+                    .body(kisAccessTokenDto)
+                    .retrieve()
+                    .toEntity(KisAccessTokenResponseDto.class)
+                    .getBody();
+
+            return setValueToRedis(ACCESS_TOKEN_KEY,
+                    responseBody.getAccess_token(), TOKEN_TTL);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            throw new StockException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
     }
 
     private String getValueFromRedis(String key) {
