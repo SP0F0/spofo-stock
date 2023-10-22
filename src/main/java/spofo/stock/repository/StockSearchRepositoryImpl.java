@@ -20,7 +20,8 @@ public class StockSearchRepositoryImpl implements StockSearchRepository {
         String sql = "select stock_name, stock_code, stock_market, image_url "
                 + "from Stock "
                 + "where stock_name like ? "
-                + "or stock_code like ?";
+                + "or stock_code like ?"
+                + "limit 20";
         String likeWord = "%" + keyword + "%";
         String[] param = List.of(likeWord, likeWord).toArray(new String[0]);
 
