@@ -1,4 +1,4 @@
-package spofo.stock.schedule.service;
+package spofo.stock.schedule.task;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,7 +10,7 @@ import spofo.stock.schedule.repository.StockScheduleRedisRepository;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class StockScheduleService {
+public class StockScheduleTasks {
 
     private final RestClient restClient;
     private final StockScheduleRedisRepository stockScheduleRedisRepository;
@@ -19,4 +19,6 @@ public class StockScheduleService {
 
     @Value("${public.data.decodingKey}")
     private String decodingKey;
+
+
 }
