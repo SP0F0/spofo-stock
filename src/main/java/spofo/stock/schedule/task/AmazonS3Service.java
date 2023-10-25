@@ -45,8 +45,12 @@ public class AmazonS3Service {
             URL url = null;
 
             try {
+                String imageKey = IMAGE_LOCATION + "t" + item.getSrtnCd() + IMAGE_EXTENSION;
+
+                if (amazonS3.doesObjectExist(IMAGE_LOCATION, imageKey)) continue;
 
                 url = new URL(originUrl + item.getSrtnCd() + IMAGE_EXTENSION);
+
                 InputStream inputStream = url.openStream();
                 byte[] bytes = IOUtils.toByteArray(inputStream);
                 ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(bytes);
@@ -55,10 +59,11 @@ public class AmazonS3Service {
                 objectMetadata.setContentType(IMAGE_EXTENSION);
                 objectMetadata.setContentLength(bytes.length);
 
-                String imageKey = IMAGE_LOCATION + "t" + item.getSrtnCd() + IMAGE_EXTENSION;
                 amazonS3.putObject(
                         new PutObjectRequest(bucket, imageKey, byteArrayInputStream, objectMetadata));
+
                 savedImageUrl.put(item.getSrtnCd(), s3Url + imageKey);
+
             } catch (IOException e) {
                 String imageKey = IMAGE_LOCATION + DEFAULT_IMAGE_NAME + DEFAULT_IMAGE_EXTENSION;
                 savedImageUrl.put(item.getSrtnCd(), s3Url + imageKey);
