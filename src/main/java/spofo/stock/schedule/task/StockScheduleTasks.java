@@ -1,5 +1,6 @@
 package spofo.stock.schedule.task;
 
+import jakarta.annotation.PostConstruct;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
@@ -8,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -34,6 +36,9 @@ public class StockScheduleTasks {
     private final AmazonS3Service amazonS3Service;
     private final StockScheduleRedisRepository stockScheduleRedisRepository;
 
+
+    @PostConstruct
+    @Scheduled(cron = "0 0 8 * * ?")
     public List<Stock> saveStocks() {
 
         String recentTradingDate = getRecentTradeDate();
@@ -49,7 +54,7 @@ public class StockScheduleTasks {
 
         List<Stock> stockList = getStockList(imageUrlMap, itemList);
         log.info("newStockList Size : {}", stockList.size());
-        Iterable<Stock> stockInfos = stockScheduleRedisRepository.saveAll(stockList);
+        stockScheduleRedisRepository.saveAll(stockList);
         return stockList;
     }
 
