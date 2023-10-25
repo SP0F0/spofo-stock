@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.Id;
 import org.springframework.data.redis.core.RedisHash;
 
 @Builder
@@ -14,6 +15,8 @@ import org.springframework.data.redis.core.RedisHash;
 public class Stock {
 
     private String name;
+
+    @Id
     private String stockCode;
     private String imageUrl;
     private String market;
