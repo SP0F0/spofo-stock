@@ -10,7 +10,6 @@ import spofo.stock.schedule.entity.Stock;
 
 @Getter
 @NoArgsConstructor
-@Builder
 @RedisHash(value = "stockCurrentPrice", timeToLive = 60)
 public class StockCurrentPriceResponseDto {
 
@@ -36,21 +35,21 @@ public class StockCurrentPriceResponseDto {
 
     public static StockCurrentPriceResponseDto of(Output output, String stockName) {
         return StockCurrentPriceResponseDto.builder()
-                .price(output.getStck_prpr())
+                .code(output.getStck_shrn_iscd())
                 .name(stockName)
+                .price(output.getStck_prpr())
                 .market(output.getRprs_mrkt_kor_name())
                 .sector(output.getBstp_kor_isnm())
-                .code(output.getStck_shrn_iscd())
                 .build();
     }
 
     public static StockCurrentPriceResponseDto of(Output output, Stock stock) {
         return StockCurrentPriceResponseDto.builder()
-                .code(output.getStck_shrn_iscd())
+                .code(stock.getStockCode())
                 .name(stock.getName())
                 .price(output.getStck_prpr())
                 .imageUrl(stock.getImageUrl())
-                .market(output.getRprs_mrkt_kor_name())
+                .market(stock.getMarket())
                 .sector(output.getBstp_kor_isnm())
                 .build();
     }
