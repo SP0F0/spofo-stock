@@ -11,15 +11,13 @@ import org.springframework.data.redis.core.RedisHash;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-@RedisHash(value = "stock", timeToLive = 6000)
+@RedisHash(value = "stock")
 public class Stock {
-
-    private String name;
 
     @Id
     private String stockCode;
+    private String name;
     private String imageUrl;
     private String market;
-    private String closingPrice;
     private String createdAt;
 }
