@@ -12,10 +12,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import spofo.stock.data.request.publicdata.Item;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AmazonS3Service {
@@ -47,8 +49,9 @@ public class AmazonS3Service {
             try {
                 String imageKey = IMAGE_LOCATION + "t" + stockCode + IMAGE_EXTENSION;
 
-                if (amazonS3.doesObjectExist(IMAGE_LOCATION, imageKey)) {
-                    savedImageUrlMap.put(stockCode, imageKey);
+                if (amazonS3.doesObjectExist(bucket, imageKey)) {
+                    log.info("already exist, imageKey: {}", imageKey);
+                    savedImageUrlMap.put(stockCode, s3Url + imageKey);
                     continue;
                 }
 
@@ -62,6 +65,7 @@ public class AmazonS3Service {
                 objectMetadata.setContentType(IMAGE_EXTENSION);
                 objectMetadata.setContentLength(bytes.length);
 
+                log.info("save this imageKey : {}", imageKey);
                 amazonS3.putObject(
                         new PutObjectRequest(bucket, imageKey, byteArrayInputStream, objectMetadata));
 
