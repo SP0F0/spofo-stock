@@ -38,18 +38,21 @@ public class AmazonS3Service {
 
     public Map<String, String> uploadLogos(List<Item> itemList) {
 
-        Map<String, String> savedImageUrl = new HashMap<>();
+        Map<String, String> savedImageUrlMap = new HashMap<>();
 
         for (Item item : itemList) {
 
-            URL url = null;
+            String stockCode = item.getSrtnCd();
 
             try {
-                String imageKey = IMAGE_LOCATION + "t" + item.getSrtnCd() + IMAGE_EXTENSION;
+                String imageKey = IMAGE_LOCATION + "t" + stockCode + IMAGE_EXTENSION;
 
-                if (amazonS3.doesObjectExist(IMAGE_LOCATION, imageKey)) continue;
+                if (amazonS3.doesObjectExist(IMAGE_LOCATION, imageKey)) {
+                    savedImageUrlMap.put(stockCode, imageKey);
+                    continue;
+                }
 
-                url = new URL(originUrl + item.getSrtnCd() + IMAGE_EXTENSION);
+                URL url = new URL(originUrl + stockCode + IMAGE_EXTENSION);
 
                 InputStream inputStream = url.openStream();
                 byte[] bytes = IOUtils.toByteArray(inputStream);
@@ -62,14 +65,14 @@ public class AmazonS3Service {
                 amazonS3.putObject(
                         new PutObjectRequest(bucket, imageKey, byteArrayInputStream, objectMetadata));
 
-                savedImageUrl.put(item.getSrtnCd(), s3Url + imageKey);
+                savedImageUrlMap.put(stockCode, s3Url + imageKey);
 
             } catch (IOException e) {
                 String imageKey = IMAGE_LOCATION + DEFAULT_IMAGE_NAME + DEFAULT_IMAGE_EXTENSION;
-                savedImageUrl.put(item.getSrtnCd(), s3Url + imageKey);
+                savedImageUrlMap.put(stockCode, s3Url + imageKey);
             }
         }
 
-        return savedImageUrl;
+        return savedImageUrlMap;
     }
 }
