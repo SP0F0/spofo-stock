@@ -2,6 +2,8 @@ package spofo.stock.service;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.util.StringUtils.hasText;
+import static spofo.stock.exception.ErrorCode.INTERNAL_SERVER_ERROR;
+import static spofo.stock.exception.ErrorCode.INVALID_STOCK_CODE;
 
 import java.net.URI;
 import java.time.Duration;
@@ -14,7 +16,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import spofo.stock.config.KisAccessTokenDto;
@@ -24,9 +25,10 @@ import spofo.stock.data.request.kis.KisAccessTokenResponseDto;
 import spofo.stock.data.request.kis.KisRequestDto;
 import spofo.stock.data.request.kis.Output;
 import spofo.stock.exception.StockException;
-import spofo.stock.exception.ErrorCode;
 import spofo.stock.repository.StockRedisRepository;
 import spofo.stock.repository.StockSearchRepository;
+import spofo.stock.schedule.entity.Stock;
+import spofo.stock.schedule.repository.StockScheduleRedisRepository;
 
 @Slf4j
 @Service
@@ -51,10 +53,11 @@ public class StockService {
     private final RedisTemplate<String, String> redisTemplate;
     private final StockRedisRepository stockRedisRepository;
     private final StockSearchRepository stockSearchRepository;
+    private final StockScheduleRedisRepository stockScheduleRedisRepository;
 
     public StockCurrentPriceResponseDto findCurrentPriceByStockCode(String stockCode) {
         return stockRedisRepository.findById(stockCode)
-                .orElseGet(() -> getCurrentPriceByKis(stockCode));
+                .orElseGet(() -> getCurrentPriceByKisRedis(stockCode));
     }
 
     @Transactional(readOnly = true)
@@ -70,6 +73,24 @@ public class StockService {
                 .collect(Collectors.toList());
     }
 
+    private StockCurrentPriceResponseDto getCurrentPriceByKisRedis(String stockCode) {
+
+        URI uri = generateCurrentPriceApiUri(stockCode);
+        String accessToken = getAccessToken();
+        Output output = getCurrentPriceOutput(uri, accessToken);
+
+        try {
+            Stock stock = stockScheduleRedisRepository.findById(stockCode)
+                    .orElseThrow(() -> new StockException(INVALID_STOCK_CODE));
+
+            StockCurrentPriceResponseDto stockCurrentPriceResponseDto = StockCurrentPriceResponseDto.of(output, stock);
+
+            return stockRedisRepository.save(stockCurrentPriceResponseDto);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            throw new StockException(INVALID_STOCK_CODE);
+        }
+    }
     private StockCurrentPriceResponseDto getCurrentPriceByKis(String stockCode) {
 
         URI uri = generateCurrentPriceApiUri(stockCode);
@@ -86,13 +107,13 @@ public class StockService {
             return stockRedisRepository.save(stockCurrentPriceResponseDto);
         } catch (Exception e) {
             log.error(e.getMessage());
-            throw new StockException(ErrorCode.INVALID_STOCK_CODE);
+            throw new StockException(INVALID_STOCK_CODE);
         }
     }
 
     private String getStockFromRedis(String stockCode) {
         String stockName = stockSearchRepository.findStockNameByStockCode(stockCode)
-                .orElseThrow(() -> new StockException(ErrorCode.INVALID_STOCK_CODE));
+                .orElseThrow(() -> new StockException(INVALID_STOCK_CODE));
         setValueToRedis(stockCode, stockName, Duration.ofDays(30));
         return stockName;
     }
@@ -149,7 +170,7 @@ public class StockService {
                     responseBody.getAccess_token(), TOKEN_TTL);
         } catch (Exception e) {
             log.error(e.getMessage());
-            throw new StockException(ErrorCode.INTERNAL_SERVER_ERROR);
+            throw new StockException(INTERNAL_SERVER_ERROR);
         }
     }
 
