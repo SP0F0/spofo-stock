@@ -1,5 +1,6 @@
 package spofo.stock.schedule.task;
 
+import java.net.URI;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,6 +26,7 @@ public class StockScheduleTasks {
     public void saveStocks() {
 
         String recentTradingDate = getRecentTradeDate();
+        URI uri = getUriComponents(recentTradingDate);
 
     }
 
@@ -52,5 +54,19 @@ public class StockScheduleTasks {
 
         log.info("recentTradingDate = {}", recentTradingDate);
         return recentTradingDate;
+    }
+
+    private URI getUriComponents(String recentTradingDate) {
+        URI uri = UriComponentsBuilder
+                .fromUriString(publicDataUrl)
+                .path(publicDataPath)
+                .queryParam("serviceKey", "{key}")
+                .queryParam("numOfRows", "{num}")
+                .queryParam("resultType", "{type}")
+                .queryParam("basDt", "{date}")
+                .encode()
+                .buildAndExpand(decodingKey, 5000, "json", recentTradingDate)
+                .toUri();
+        return uri;
     }
 }
