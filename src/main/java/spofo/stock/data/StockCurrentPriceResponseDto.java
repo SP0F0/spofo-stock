@@ -10,7 +10,7 @@ import spofo.stock.data.request.kis.Output;
 @Getter
 @NoArgsConstructor
 @Builder
-@RedisHash(value = "stock", timeToLive = 60)
+@RedisHash(value = "stockCurrentPrice", timeToLive = 60)
 public class StockCurrentPriceResponseDto {
 
     @Id
