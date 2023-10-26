@@ -16,7 +16,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.UnknownContentTypeException;
 import org.springframework.web.util.UriComponentsBuilder;
 import spofo.stock.config.KisAccessTokenDto;
 import spofo.stock.data.StockCurrentPriceResponseDto;
@@ -79,36 +81,27 @@ public class StockService {
         String accessToken = getAccessToken();
         Output output = getCurrentPriceOutput(uri, accessToken);
 
-        try {
-            Stock stock = stockScheduleRedisRepository.findById(stockCode)
-                    .orElseThrow(() -> new StockException(INVALID_STOCK_CODE));
+        Stock stock = stockScheduleRedisRepository.findById(stockCode)
+                .orElseThrow(() -> new StockException(INVALID_STOCK_CODE));
 
-            StockCurrentPriceResponseDto stockCurrentPriceResponseDto = StockCurrentPriceResponseDto.of(output, stock);
+        StockCurrentPriceResponseDto stockCurrentPriceResponseDto = StockCurrentPriceResponseDto.of(output, stock);
 
-            return stockRedisRepository.save(stockCurrentPriceResponseDto);
-        } catch (Exception e) {
-            log.error(e.getMessage());
-            throw new StockException(INVALID_STOCK_CODE);
-        }
+        return stockRedisRepository.save(stockCurrentPriceResponseDto);
     }
+
     private StockCurrentPriceResponseDto getCurrentPriceByKis(String stockCode) {
 
         URI uri = generateCurrentPriceApiUri(stockCode);
         String accessToken = getAccessToken();
         Output output = getCurrentPriceOutput(uri, accessToken);
 
-        try {
-            String stockName = Optional.ofNullable(getValueFromRedis(stockCode)).orElseGet(
-                    () -> getStockFromRedis(stockCode));
+        String stockName = Optional.ofNullable(getValueFromRedis(stockCode)).orElseGet(
+                () -> getStockFromRedis(stockCode));
 
-            StockCurrentPriceResponseDto stockCurrentPriceResponseDto = StockCurrentPriceResponseDto.of(
-                    output, stockName);
+        StockCurrentPriceResponseDto stockCurrentPriceResponseDto = StockCurrentPriceResponseDto.of(
+                output, stockName);
 
-            return stockRedisRepository.save(stockCurrentPriceResponseDto);
-        } catch (Exception e) {
-            log.error(e.getMessage());
-            throw new StockException(INVALID_STOCK_CODE);
-        }
+        return stockRedisRepository.save(stockCurrentPriceResponseDto);
     }
 
     private String getStockFromRedis(String stockCode) {
@@ -119,6 +112,7 @@ public class StockService {
     }
 
     private URI generateCurrentPriceApiUri(String stockCode) {
+
         return UriComponentsBuilder
                 .fromUriString(KIS_URL)
                 .path(CURRENT_PRICE_PATH)
@@ -136,17 +130,25 @@ public class StockService {
     }
 
     private Output getCurrentPriceOutput(URI uri, String accessToken) {
-        KisRequestDto kisRequestDto = restClient.get()
-                .uri(uri)
-                .header("authorization", "Bearer " + accessToken)
-                .header("appkey", appKey)
-                .header("appsecret", appSecret)
-                .header("tr_id", TRADE_ID)
-                .accept(APPLICATION_JSON)
-                .retrieve()
-                .body(KisRequestDto.class);
+        try {
+            KisRequestDto kisRequestDto = restClient.get()
+                    .uri(uri)
+                    .header("authorization", "Bearer " + accessToken)
+                    .header("appkey", appKey)
+                    .header("appsecret", appSecret)
+                    .header("tr_id", TRADE_ID)
+                    .accept(APPLICATION_JSON)
+                    .retrieve()
+                    .body(KisRequestDto.class);
 
-        return kisRequestDto.getOutput();
+            return kisRequestDto.getOutput();
+        } catch (ResourceAccessException e){
+            throw new StockException(INTERNAL_SERVER_ERROR);
+        } catch (UnknownContentTypeException e) {
+            throw new StockException(INTERNAL_SERVER_ERROR);
+        }
+
+
     }
 
     private String getAccessTokenFromKis() {
@@ -168,8 +170,9 @@ public class StockService {
 
             return setValueToRedis(ACCESS_TOKEN_KEY,
                     responseBody.getAccess_token(), TOKEN_TTL);
-        } catch (Exception e) {
-            log.error(e.getMessage());
+        } catch (ResourceAccessException e){
+            throw new StockException(INTERNAL_SERVER_ERROR);
+        } catch (UnknownContentTypeException e) {
             throw new StockException(INTERNAL_SERVER_ERROR);
         }
     }

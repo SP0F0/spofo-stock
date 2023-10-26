@@ -1,5 +1,7 @@
 package spofo.stock.schedule.task;
 
+import static spofo.stock.exception.ErrorCode.INTERNAL_SERVER_ERROR;
+
 import jakarta.annotation.PostConstruct;
 import java.net.URI;
 import java.util.ArrayList;
@@ -11,10 +13,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.UnknownContentTypeException;
 import org.springframework.web.util.UriComponentsBuilder;
 import spofo.stock.data.request.publicdata.Item;
 import spofo.stock.data.request.publicdata.PublicDataRequestDto;
+import spofo.stock.exception.StockException;
 import spofo.stock.schedule.entity.Stock;
 import spofo.stock.schedule.repository.StockScheduleRedisRepository;
 
@@ -70,19 +75,27 @@ public class StockScheduleTasks {
                 .buildAndExpand(1, decodingKey, "json")
                 .toUri();
 
-        PublicDataRequestDto response = restClient.get()
-                .uri(uri)
-                .accept(MediaType.APPLICATION_JSON)
-                .retrieve()
-                .body(PublicDataRequestDto.class);
+        try {
 
-        String recentTradingDate = response.getResponse().getBody().getItems()
-                .getItem()
-                .get(0)
-                .getBasDt();
+            PublicDataRequestDto response = restClient.get()
+                    .uri(uri)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .body(PublicDataRequestDto.class);
 
-        log.info("recentTradingDate = {}", recentTradingDate);
-        return recentTradingDate;
+            String recentTradingDate = response.getResponse().getBody().getItems()
+                    .getItem()
+                    .get(0)
+                    .getBasDt();
+            log.info("recentTradingDate = {}", recentTradingDate);
+            return recentTradingDate;
+        } catch (ResourceAccessException e){
+            throw new StockException(INTERNAL_SERVER_ERROR);
+        } catch (UnknownContentTypeException e) {
+            throw new StockException(INTERNAL_SERVER_ERROR);
+        }
+
+
     }
 
     private URI getUriComponents(String recentTradingDate) {
@@ -103,13 +116,19 @@ public class StockScheduleTasks {
 
     private PublicDataRequestDto getPublicDataDto(URI uri) {
 
-        PublicDataRequestDto response = restClient.get()
-                .uri(uri)
-                .accept(MediaType.APPLICATION_JSON)
-                .retrieve()
-                .body(PublicDataRequestDto.class);
+        try {
+            PublicDataRequestDto response = restClient.get()
+                    .uri(uri)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .body(PublicDataRequestDto.class);
 
-        return response;
+            return response;
+        } catch (ResourceAccessException e){
+            throw new StockException(INTERNAL_SERVER_ERROR);
+        } catch (UnknownContentTypeException e) {
+            throw new StockException(INTERNAL_SERVER_ERROR);
+        }
     }
 
     private List<Stock> getStockList(Map<String, String> imageUrlMap,
