@@ -77,4 +77,15 @@ public class AmazonS3Service {
 
         return savedImageUrlMap;
     }
+
+    public Map<String, String> uploadLogosUrl(List<Item> itemList) {
+        Map<String, String> savedImageUrlMap = new HashMap<>();
+
+        for (Item item : itemList) {
+            String stockCode = item.getSrtnCd();
+            String imageKey = s3Url + IMAGE_LOCATION + "t" + stockCode + IMAGE_EXTENSION;
+            savedImageUrlMap.put(stockCode, imageKey);
+        }
+        return savedImageUrlMap;
+    }
 }
