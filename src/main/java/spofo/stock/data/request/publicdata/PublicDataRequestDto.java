@@ -5,5 +5,5 @@ import lombok.Data;
 @Data
 public class PublicDataRequestDto {
 
-    private PublicDataResponseDto publicDataResponseDto;
+    private PublicDataResponseDto response;
 }

@@ -2,6 +2,8 @@ package spofo.stock.service;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.util.StringUtils.hasText;
+import static spofo.stock.exception.ErrorCode.INTERNAL_SERVER_ERROR;
+import static spofo.stock.exception.ErrorCode.INVALID_STOCK_CODE;
 
 import java.net.URI;
 import java.time.Duration;
@@ -14,8 +16,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.UnknownContentTypeException;
 import org.springframework.web.util.UriComponentsBuilder;
 import spofo.stock.config.KisAccessTokenDto;
 import spofo.stock.data.StockCurrentPriceResponseDto;
@@ -24,9 +27,10 @@ import spofo.stock.data.request.kis.KisAccessTokenResponseDto;
 import spofo.stock.data.request.kis.KisRequestDto;
 import spofo.stock.data.request.kis.Output;
 import spofo.stock.exception.StockException;
-import spofo.stock.exception.ErrorCode;
 import spofo.stock.repository.StockRedisRepository;
 import spofo.stock.repository.StockSearchRepository;
+import spofo.stock.schedule.entity.Stock;
+import spofo.stock.schedule.repository.StockScheduleRedisRepository;
 
 @Slf4j
 @Service
@@ -51,10 +55,11 @@ public class StockService {
     private final RedisTemplate<String, String> redisTemplate;
     private final StockRedisRepository stockRedisRepository;
     private final StockSearchRepository stockSearchRepository;
+    private final StockScheduleRedisRepository stockScheduleRedisRepository;
 
     public StockCurrentPriceResponseDto findCurrentPriceByStockCode(String stockCode) {
         return stockRedisRepository.findById(stockCode)
-                .orElseGet(() -> getCurrentPriceByKis(stockCode));
+                .orElseGet(() -> getCurrentPriceByKisRedis(stockCode));
     }
 
     @Transactional(readOnly = true)
@@ -70,34 +75,44 @@ public class StockService {
                 .collect(Collectors.toList());
     }
 
+    private StockCurrentPriceResponseDto getCurrentPriceByKisRedis(String stockCode) {
+
+        URI uri = generateCurrentPriceApiUri(stockCode);
+        String accessToken = getAccessToken();
+        Output output = getCurrentPriceOutput(uri, accessToken);
+
+        Stock stock = stockScheduleRedisRepository.findById(stockCode)
+                .orElseThrow(() -> new StockException(INVALID_STOCK_CODE));
+
+        StockCurrentPriceResponseDto stockCurrentPriceResponseDto = StockCurrentPriceResponseDto.of(output, stock);
+
+        return stockRedisRepository.save(stockCurrentPriceResponseDto);
+    }
+
     private StockCurrentPriceResponseDto getCurrentPriceByKis(String stockCode) {
 
         URI uri = generateCurrentPriceApiUri(stockCode);
         String accessToken = getAccessToken();
         Output output = getCurrentPriceOutput(uri, accessToken);
 
-        try {
-            String stockName = Optional.ofNullable(getValueFromRedis(stockCode)).orElseGet(
-                    () -> getStockFromRedis(stockCode));
+        String stockName = Optional.ofNullable(getValueFromRedis(stockCode)).orElseGet(
+                () -> getStockFromRedis(stockCode));
 
-            StockCurrentPriceResponseDto stockCurrentPriceResponseDto = StockCurrentPriceResponseDto.of(
-                    output, stockName);
+        StockCurrentPriceResponseDto stockCurrentPriceResponseDto = StockCurrentPriceResponseDto.of(
+                output, stockName);
 
-            return stockRedisRepository.save(stockCurrentPriceResponseDto);
-        } catch (Exception e) {
-            log.error(e.getMessage());
-            throw new StockException(ErrorCode.INVALID_STOCK_CODE);
-        }
+        return stockRedisRepository.save(stockCurrentPriceResponseDto);
     }
 
     private String getStockFromRedis(String stockCode) {
         String stockName = stockSearchRepository.findStockNameByStockCode(stockCode)
-                .orElseThrow(() -> new StockException(ErrorCode.INVALID_STOCK_CODE));
+                .orElseThrow(() -> new StockException(INVALID_STOCK_CODE));
         setValueToRedis(stockCode, stockName, Duration.ofDays(30));
         return stockName;
     }
 
     private URI generateCurrentPriceApiUri(String stockCode) {
+
         return UriComponentsBuilder
                 .fromUriString(KIS_URL)
                 .path(CURRENT_PRICE_PATH)
@@ -115,17 +130,25 @@ public class StockService {
     }
 
     private Output getCurrentPriceOutput(URI uri, String accessToken) {
-        KisRequestDto kisRequestDto = restClient.get()
-                .uri(uri)
-                .header("authorization", "Bearer " + accessToken)
-                .header("appkey", appKey)
-                .header("appsecret", appSecret)
-                .header("tr_id", TRADE_ID)
-                .accept(APPLICATION_JSON)
-                .retrieve()
-                .body(KisRequestDto.class);
+        try {
+            KisRequestDto kisRequestDto = restClient.get()
+                    .uri(uri)
+                    .header("authorization", "Bearer " + accessToken)
+                    .header("appkey", appKey)
+                    .header("appsecret", appSecret)
+                    .header("tr_id", TRADE_ID)
+                    .accept(APPLICATION_JSON)
+                    .retrieve()
+                    .body(KisRequestDto.class);
 
-        return kisRequestDto.getOutput();
+            return kisRequestDto.getOutput();
+        } catch (ResourceAccessException e){
+            throw new StockException(INTERNAL_SERVER_ERROR);
+        } catch (UnknownContentTypeException e) {
+            throw new StockException(INTERNAL_SERVER_ERROR);
+        }
+
+
     }
 
     private String getAccessTokenFromKis() {
@@ -147,9 +170,10 @@ public class StockService {
 
             return setValueToRedis(ACCESS_TOKEN_KEY,
                     responseBody.getAccess_token(), TOKEN_TTL);
-        } catch (Exception e) {
-            log.error(e.getMessage());
-            throw new StockException(ErrorCode.INTERNAL_SERVER_ERROR);
+        } catch (ResourceAccessException e){
+            throw new StockException(INTERNAL_SERVER_ERROR);
+        } catch (UnknownContentTypeException e) {
+            throw new StockException(INTERNAL_SERVER_ERROR);
         }
     }
 
