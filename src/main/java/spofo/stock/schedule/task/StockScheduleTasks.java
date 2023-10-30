@@ -45,7 +45,6 @@ public class StockScheduleTasks {
     @PostConstruct
     @Scheduled(cron = "0 0 8 * * ?")
     public List<Stock> saveStocks() {
-
         String recentTradingDate = getRecentTradeDate();
         URI uri = getUriComponents(recentTradingDate);
         PublicDataRequestDto response = getPublicDataDto(uri);
@@ -56,9 +55,8 @@ public class StockScheduleTasks {
                 .toList();
 
         Map<String, String> imageUrlMap = amazonS3Service.uploadLogos(newStockList);
+        List<Stock> stockList = getStockList(imageUrlMap, newStockList);
 
-        List<Stock> stockList = getStockList(imageUrlMap, itemList);
-        log.info("newStockList Size : {}", stockList.size());
         stockScheduleRedisRepository.saveAll(stockList);
         return stockList;
     }
