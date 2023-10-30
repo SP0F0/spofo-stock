@@ -17,6 +17,7 @@ public class StockSearchRepositoryImpl implements StockSearchRepository {
 
     @Override
     public List<StockSearchResponseDto> findStocksByKeyword(String keyword) {
+        if (keyword == null) return null;
         String sql = "select stock_name, stock_code, stock_market, image_url "
                 + "from Stock "
                 + "where stock_name like ? "
@@ -30,6 +31,7 @@ public class StockSearchRepositoryImpl implements StockSearchRepository {
 
     @Override
     public Optional<String> findStockNameByStockCode(String stockCode) {
+        if (stockCode == null) return null;
         String sql = "select stock_name "
                 + "from Stock "
                 + "where stock_code = ?";
